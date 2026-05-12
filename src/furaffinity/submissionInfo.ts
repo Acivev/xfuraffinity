@@ -11,7 +11,7 @@ export type SubmissionInfo = {
   faveCount: number;
   imageUrl: string;
   contentType: ContentType;
-  sizeBytes: number;
+  sizeBytes: number | null;
   thumbnailUrl: string;
   artistName: string;
   artistUrl: string;
