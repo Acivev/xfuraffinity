@@ -77,6 +77,7 @@ export async function handleSubmission(
     }
   } catch (err) {
     noticeError(err);
+    console.error('[xfuraffinity] Unexpected error:', err instanceof Error ? err.message : String(err));
     return {
       type: 'embed',
       html: generateMessageEmbed('xfuraffinity Error', 'An unexpected error occurred. Please report this at github.com/FirraWoof/xfuraffinity'),

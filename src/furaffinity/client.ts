@@ -67,17 +67,10 @@ async function fetchImageMeta(imageUrl: string, cookieHeader: string): Promise<{
   });
 
   const contentLength = response.headers.get('content-length');
-  if (!contentLength) {
-    throw new Error(`content-length header missing from HEAD ${imageUrl}`);
-  }
-
-  const sizeBytes = parseInt(contentLength, 10);
-  if (isNaN(sizeBytes)) {
-    throw new Error(`Could not parse content-length "${contentLength}" from HEAD ${imageUrl}`);
-  }
+  const sizeBytes = contentLength ? parseInt(contentLength, 10) : 0;
 
   const contentType = parseContentType(response.headers.get('content-type'), imageUrl);
-  return { sizeBytes, contentType };
+  return { sizeBytes: isNaN(sizeBytes) ? 0 : sizeBytes, contentType };
 }
 
 function parseContentType(header: string | null, imageUrl: string): ContentType {
@@ -110,21 +103,14 @@ async function fetchAudioMeta(audioUrl: string): Promise<{ audioContentType: Aud
   const response = await fetch(audioUrl, { method: 'HEAD' });
 
   const contentLength = response.headers.get('content-length');
-  if (!contentLength) {
-    throw new Error(`content-length header missing from HEAD ${audioUrl}`);
-  }
-
-  const audioSizeBytes = parseInt(contentLength, 10);
-  if (isNaN(audioSizeBytes)) {
-    throw new Error(`Could not parse content-length "${contentLength}" from HEAD ${audioUrl}`);
-  }
+  const audioSizeBytes = contentLength ? parseInt(contentLength, 10) : 0;
 
   const mimeType = response.headers.get('content-type')?.split(';')[0].trim();
   if (!isAudioContentType(mimeType)) {
     throw new Error(`Unexpected audio content type "${mimeType}" from HEAD ${audioUrl}`);
   }
 
-  return { audioContentType: mimeType, audioSizeBytes };
+  return { audioContentType: mimeType, audioSizeBytes: isNaN(audioSizeBytes) ? 0 : audioSizeBytes };
 }
 
 async function readBodySnippet(response: Response, maxLen = 500): Promise<string> {

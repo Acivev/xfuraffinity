@@ -17,6 +17,7 @@ export type SubmissionPageResult =
 
 const SUBMISSION_NOT_FOUND_TEXT = 'not in our database';
 const UNAUTHENTICATED_TEXT = 'please log in';
+const LOGIN_REQUIRED_TITLE = 'login required';
 const CLOUDFLARE_JS_REQUIRED_TEXT = 'enable javascript and cookies to continue';
 const CLOUDFLARE_CHECKING_TEXT = 'checking your browser';
 
@@ -30,6 +31,12 @@ export function parseSubmissionPage(html: string): SubmissionPageResult {
   const pageText = $.root().text().toLowerCase();
   if (pageText.includes(CLOUDFLARE_JS_REQUIRED_TEXT) || pageText.includes(CLOUDFLARE_CHECKING_TEXT)) {
     return { type: 'blocked' };
+  }
+
+  // Check for login required page (expired/invalid session)
+  const pageTitle = $('title').text().toLowerCase();
+  if (pageTitle.includes(LOGIN_REQUIRED_TITLE)) {
+    return { type: 'unauthenticated' };
   }
 
   const sectionBodyText = $('.section-body').text();
@@ -47,15 +54,20 @@ export function parseSubmissionPage(html: string): SubmissionPageResult {
   const url = $('meta[property*="og:url"]').attr('content');
   const title = $('meta[property*="og:title"]').attr('content');
   const description = $('meta[property*="og:description"]').attr('content');
-  const viewCountText = $('div.views span').first().text();
-  const commentCountText = $('section.stats-container div.comments span').first().text();
-  const faveCountText = $('div.favorites span').first().text();
+  const viewCountText = $('.submission-page-stats div[title="Views"] div').first().text().trim()
+    || $('div.views span').first().text(); // fallback old layout
+  const commentCountText = $('.submission-page-stats div[title="Comments"] div').first().text().trim()
+    || $('section.stats-container div.comments span').first().text();
+  const faveCountText = $('.submission-page-stats div[title="Favorites"] div').first().text().trim()
+    || $('div.favorites span').first().text();
   const thumbnailSrc = $('#submissionImg').attr('data-preview-src');
-  const artistLink = $('.submission-id-sub-container a[href^="/user/"]').first();
+  const artistLink = $('.submission-description-artist .c-usernameBlockSimple a[href^="/user/"]').first().length
+    ? $('.submission-description-artist .c-usernameBlockSimple a[href^="/user/"]').first()
+    : $('.submission-id-sub-container a[href^="/user/"]').first(); // fallback old layout
   const artistName = artistLink.text().trim();
   const artistHref = artistLink.attr('href');
 
-  if (!url || !title || !description || !thumbnailSrc || !artistName || !artistHref) {
+  if (!url || !title || description === undefined || !thumbnailSrc || !artistName || !artistHref) {
     throw new Error(
       `Failed to parse submission page: missing fields (url=${url}, title=${title}, thumbnail=${thumbnailSrc}, artist=${artistName})`
     );
@@ -103,7 +115,9 @@ export function parseSubmissionPage(html: string): SubmissionPageResult {
     return { type: 'story', info: { ...commonInfo, contentUrl: `https:${contentUrl}`, extension } };
   }
 
-  const downloadHref = $('div.download a').attr('href');
+  // New FA layout: Download button in #submission-options
+  const downloadHref = $('#submission-options a[href^="//d.furaffinity.net"]').attr('href')
+    || $('div.download a').attr('href'); // fallback old layout
   if (!downloadHref) {
     throw new Error(`Failed to parse submission page: missing download href (url=${url})`);
   }
