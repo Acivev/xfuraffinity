@@ -104,14 +104,21 @@ async function fetchAudioMeta(audioUrl: string): Promise<{ audioContentType: Aud
   const response = await fetch(audioUrl, { method: 'HEAD' });
 
   const contentLength = response.headers.get('content-length');
-  const audioSizeBytes = contentLength ? parseInt(contentLength, 10) : 0;
+  if (!contentLength) {
+    throw new Error(`content-length header missing from HEAD ${audioUrl}`);
+  }
+
+  const sizeBytes = parseInt(contentLength, 10);
+  if (isNaN(sizeBytes)) {
+    throw new Error(`Could not parse content-length "${contentLength}" from HEAD ${audioUrl}`);
+  }
 
   const mimeType = response.headers.get('content-type')?.split(';')[0].trim();
   if (!isAudioContentType(mimeType)) {
     throw new Error(`Unexpected audio content type "${mimeType}" from HEAD ${audioUrl}`);
   }
 
-  return { audioContentType: mimeType, audioSizeBytes: isNaN(audioSizeBytes) ? 0 : audioSizeBytes };
+  return { audioContentType: mimeType, audioSizeBytes: sizeBytes };
 }
 
 async function readBodySnippet(response: Response, maxLen = 500): Promise<string> {
