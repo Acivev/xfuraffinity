@@ -51,8 +51,9 @@ export function generateImageTelegramEmbed(info: SubmissionInfo): string {
 }
 
 function chooseImageEmbedUrl(info: SubmissionInfo): string {
-  if (info.sizeBytes < FIVE_MB) return info.imageUrl;
-  // GIF and video are kept as-is even if large; images fall back to thumbnail
   if (info.contentType === 'image/gif' || info.contentType === 'video/mp4') return info.imageUrl;
+  // Unknown size: fall back to thumbnail to be safe
+  if (info.sizeBytes === null) return info.thumbnailUrl;
+  if (info.sizeBytes < FIVE_MB) return info.imageUrl;
   return info.thumbnailUrl;
 }

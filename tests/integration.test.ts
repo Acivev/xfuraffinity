@@ -21,6 +21,8 @@ const musicHtml = fixture('music.html');
 const flashHtml = fixture('flash.html');
 const notFoundHtml = fixture('not-found.html');
 const unauthenticatedHtml = fixture('unauthenticated.html');
+const loginRequiredHtml = fixture('login-required.html');
+const imageNewLayoutHtml = fixture('image-new-layout.html');
 const blockedHtml = fixture('blocked.html');
 
 const DISCORD_UA = 'Mozilla/5.0 (compatible; Discordbot/2.0; +https://discordapp.com)';
@@ -38,6 +40,8 @@ const defaultHandlers = [
   http.get('https://www.furaffinity.net/view/128', () => HttpResponse.text(flashHtml)),
   http.get('https://www.furaffinity.net/view/129', () => HttpResponse.text(notFoundHtml)),
   http.get('https://www.furaffinity.net/view/130', () => HttpResponse.text(unauthenticatedHtml)),
+  http.get('https://www.furaffinity.net/view/133', () => HttpResponse.text(loginRequiredHtml)),
+  http.get('https://www.furaffinity.net/view/134', () => HttpResponse.text(imageNewLayoutHtml)),
   http.get('https://www.furaffinity.net/view/131', () => HttpResponse.text(blockedHtml)),
   http.get('https://www.furaffinity.net/view/132', () => new HttpResponse(null, { status: 500 })),
 
@@ -50,6 +54,9 @@ const defaultHandlers = [
   ),
   http.head('https://d.furaffinity.net/art/testartist/125/large.jpg', () =>
     new HttpResponse(null, { headers: { 'content-length': '6291456', 'content-type': 'image/jpeg' } })
+  ),
+  http.head('https://d.furaffinity.net/art/testartist/134/test.jpg', () =>
+    new HttpResponse(null, { headers: { 'content-length': '1048576', 'content-type': 'image/jpeg' } })
   ),
 
   // Story text fetch
@@ -77,7 +84,6 @@ beforeAll(async () => {
     sessionA: 'test-a',
     sessionB: 'test-b',
     port: 0,
-    metricsPort: 0,
     cacheDir,
     publicUrl: 'https://example.com',
   });
@@ -162,6 +168,18 @@ describe('image embeds', () => {
     expect(body).toContain('application/json+oembed');
     expect(body).toContain('https://example.com/oembed?id=123');
   });
+
+  it('parses submission correctly with new FA layout (.submission-page-stats)', async () => {
+    const response = await app.inject({ method: 'GET', url: '/view/134', headers: { 'user-agent': DISCORD_UA } });
+    expect(response.statusCode).toBe(200);
+    const body = response.body;
+    expect(body).toContain('Test Image New Layout');
+    expect(body).toContain('og:image');
+    expect(body).toContain('https://d.furaffinity.net/art/testartist/134/test.jpg');
+    expect(body).toContain('1,234');
+    expect(body).toContain('56');
+    expect(body).toContain('789');
+  });
 });
 
 describe('telegram image embeds', () => {
@@ -239,6 +257,12 @@ describe('error states', () => {
 
   it('returns Session Expired for unauthenticated', async () => {
     const response = await app.inject({ method: 'GET', url: '/view/130', headers: { 'user-agent': DISCORD_UA } });
+    expect(response.statusCode).toBe(200);
+    expect(response.body).toContain('Session Expired');
+  });
+
+  it('returns Session Expired for login-required page (title-based detection)', async () => {
+    const response = await app.inject({ method: 'GET', url: '/view/133', headers: { 'user-agent': DISCORD_UA } });
     expect(response.statusCode).toBe(200);
     expect(response.body).toContain('Session Expired');
   });
