@@ -21,6 +21,7 @@ const musicHtml = fixture('music.html');
 const flashHtml = fixture('flash.html');
 const notFoundHtml = fixture('not-found.html');
 const unauthenticatedHtml = fixture('unauthenticated.html');
+const loginRequiredHtml = fixture('login-required.html');
 const blockedHtml = fixture('blocked.html');
 
 const DISCORD_UA = 'Mozilla/5.0 (compatible; Discordbot/2.0; +https://discordapp.com)';
@@ -38,6 +39,7 @@ const defaultHandlers = [
   http.get('https://www.furaffinity.net/view/128', () => HttpResponse.text(flashHtml)),
   http.get('https://www.furaffinity.net/view/129', () => HttpResponse.text(notFoundHtml)),
   http.get('https://www.furaffinity.net/view/130', () => HttpResponse.text(unauthenticatedHtml)),
+  http.get('https://www.furaffinity.net/view/133', () => HttpResponse.text(loginRequiredHtml)),
   http.get('https://www.furaffinity.net/view/131', () => HttpResponse.text(blockedHtml)),
   http.get('https://www.furaffinity.net/view/132', () => new HttpResponse(null, { status: 500 })),
 
@@ -77,7 +79,6 @@ beforeAll(async () => {
     sessionA: 'test-a',
     sessionB: 'test-b',
     port: 0,
-    metricsPort: 0,
     cacheDir,
     publicUrl: 'https://example.com',
   });
@@ -239,6 +240,12 @@ describe('error states', () => {
 
   it('returns Session Expired for unauthenticated', async () => {
     const response = await app.inject({ method: 'GET', url: '/view/130', headers: { 'user-agent': DISCORD_UA } });
+    expect(response.statusCode).toBe(200);
+    expect(response.body).toContain('Session Expired');
+  });
+
+  it('returns Session Expired for login-required page (title-based detection)', async () => {
+    const response = await app.inject({ method: 'GET', url: '/view/133', headers: { 'user-agent': DISCORD_UA } });
     expect(response.statusCode).toBe(200);
     expect(response.body).toContain('Session Expired');
   });
